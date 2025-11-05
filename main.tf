@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.0"
+  required_version = ">= 1.0, < 2.0"
 
   required_providers {
     aws = {
@@ -27,14 +27,11 @@ provider "aws" {
   }
 }
 
-# Random suffix para garantir unicidade de nomes
-resource "random_id" "suffix" {
-  byte_length = 4
-}
+
 
 locals {
   name_prefix = "${var.project_name}-${var.environment}"
-  suffix      = random_id.suffix.hex
+  suffix      = "letrus"
   common_tags = merge(
     var.tags,
     {

@@ -7,7 +7,7 @@ data "aws_rds_engine_version" "default" {
 locals {
   engine_version        = var.engine_version != "" ? var.engine_version : data.aws_rds_engine_version.default.version
   port                  = var.engine == "aurora-postgresql" ? 5432 : 3306
-  family                = var.engine == "aurora-postgresql" ? "aurora-postgresql15" : "aurora-mysql8.0"
+  family                = data.aws_rds_engine_version.default.parameter_group_family
   cluster_identifier    = "${var.name_prefix}-aurora-${var.suffix}"
   final_snapshot_identifier = "${var.name_prefix}-aurora-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
 }

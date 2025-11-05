@@ -48,6 +48,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "raw" {
     id     = "transition-to-ia"
     status = "Enabled"
 
+    filter {}
+
     transition {
       days          = var.lifecycle_days_to_ia
       storage_class = "STANDARD_IA"
@@ -57,6 +59,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "raw" {
   rule {
     id     = "transition-to-glacier"
     status = "Enabled"
+
+    filter {}
 
     transition {
       days          = var.lifecycle_days_to_glacier
@@ -115,6 +119,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "processed" {
     id     = "transition-to-ia"
     status = "Enabled"
 
+    filter {}
+
     transition {
       days          = var.lifecycle_days_to_ia
       storage_class = "STANDARD_IA"
@@ -124,6 +130,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "processed" {
   rule {
     id     = "transition-to-glacier"
     status = "Enabled"
+
+    filter {}
 
     transition {
       days          = var.lifecycle_days_to_glacier

@@ -93,15 +93,6 @@ Após o `terraform apply`, os seguintes outputs estarão disponíveis:
 
 Execute `terraform output` para ver todos os valores.
 
-## Segurança
-
-- ✅ Encryption at rest habilitado em todos os recursos
-- ✅ Encryption in transit habilitado
-- ✅ IAM Least Privilege Principle aplicado
-- ✅ S3 buckets com versionamento e lifecycle policies
-- ✅ Security groups restritivos
-- ✅ VPC e subnets privadas para Aurora
-
 ## Limpeza
 
 Para destruir toda a infraestrutura:
