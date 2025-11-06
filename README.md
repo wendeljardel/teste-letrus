@@ -10,7 +10,7 @@ Este projeto provisiona uma infraestrutura completa na AWS para pipelines de dad
 ## Arquitetura
 
 ```
-![Texto Alternativo](caminho/para/imagem.png)
+<img src="docs/images/architecture-diagram.png" width="600">
 ```
 
 ## Estrutura do Projeto
