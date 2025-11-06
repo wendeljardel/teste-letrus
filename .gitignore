@@ -219,3 +219,5 @@ terraform.tfstate.backup
 # Opção extra (caso use logs)
 crash.log
 *.tfplan
+#Dados gerados localmente
+data/

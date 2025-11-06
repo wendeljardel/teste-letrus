@@ -19,12 +19,12 @@ s3_lifecycle_days_to_glacier = 90
 # Aurora Configuration
 aurora_engine                = "aurora-postgresql"  # ou "aurora-mysql"
 aurora_engine_version        = ""  # Deixe vazio para usar a versão mais recente
-aurora_instance_class        = "db.t3.medium"
-aurora_instance_count        = 2
+aurora_instance_class        = "db.t3.medium"  # 1 instância para economia (2+ apenas em produção para HA)
+aurora_instance_count        = 1  # Reduzido para 1 em dev (2+ apenas em produção para HA)
 aurora_database_name         = "datawarehouse"
 aurora_master_username       = "masteruser"
 aurora_master_password       = "CHANGE_ME_IN_PROD_USE_SECRETS_MANAGER"  # Use AWS Secrets Manager em produção
-aurora_backup_retention_period = 7
+aurora_backup_retention_period = 1  # Reduzido para 1 dia em dev (7+ dias em produção)
 aurora_preferred_backup_window = "03:00-04:00"
 aurora_preferred_maintenance_window = "mon:04:00-mon:05:00"
 aurora_skip_final_snapshot   = true  # false para produção

@@ -1,16 +1,16 @@
 """
 AWS Glue Job - ETL Pipeline para Dados Educacionais
 
-Este job realiza:
 1. Leitura dos dados brutos (CSV) do S3
-2. Transformações e limpeza
+2. Transformacoes e limpeza
 3. Join das tabelas
-4. Agregações
+4. Agregacoes
 5. Export para Parquet no S3 processed
 6. Carregamento de dados agregados no Aurora
 """
 
 import sys
+import logging
 from awsglue.transforms import *
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
@@ -24,8 +24,14 @@ from pyspark.sql.types import StructType, StructField, StringType, IntegerType, 
 import boto3
 import json
 
-# Configurações de conexão (serão passadas como parâmetros do job)
-# Pode ser configurado via job parameters ou Secrets Manager
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
+# Configuracoes de conexao passadas como parametros do job
 
 args = getResolvedOptions(sys.argv, [
     'JOB_NAME',
@@ -43,17 +49,16 @@ spark = glueContext.spark_session
 job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 
-print(f"🚀 Iniciando job: {args['JOB_NAME']}")
-print(f"📂 Bucket Raw: {args['S3_RAW_BUCKET']}")
-print(f"📂 Bucket Processed: {args['S3_PROCESSED_BUCKET']}")
-print(f"🗄️  Aurora Connection: {args['AURORA_CONNECTION_NAME']}")
-print()
+logger.info(f"Iniciando job: {args['JOB_NAME']}")
+logger.info(f"Bucket Raw: {args['S3_RAW_BUCKET']}")
+logger.info(f"Bucket Processed: {args['S3_PROCESSED_BUCKET']}")
+logger.info(f"Aurora Connection: {args['AURORA_CONNECTION_NAME']}")
 
 # ============================================
 # 1. LEITURA DOS DADOS BRUTOS (CSV)
 # ============================================
 
-print("📖 Lendo dados brutos do S3...")
+logger.info("Lendo dados brutos do S3...")
 
 # Ler CSV do S3 usando Glue DynamicFrame
 raw_bucket = args['S3_RAW_BUCKET']
@@ -121,12 +126,11 @@ notas_dyf = glueContext.create_dynamic_frame.from_options(
     transformation_ctx="notas_dyf"
 )
 
-print(f"   ✅ Escolas: {escolas_dyf.count()} registros")
-print(f"   ✅ Alunos: {alunos_dyf.count()} registros")
-print(f"   ✅ Notas: {notas_dyf.count()} registros")
-print()
+logger.info(f"Escolas: {escolas_dyf.count()} registros")
+logger.info(f"Alunos: {alunos_dyf.count()} registros")
+logger.info(f"Notas: {notas_dyf.count()} registros")
 
-# Converter para Spark DataFrame para facilitar transformações
+# Converter para Spark DataFrame
 escolas_df = escolas_dyf.toDF()
 alunos_df = alunos_dyf.toDF()
 notas_df = notas_dyf.toDF()
@@ -135,9 +139,9 @@ notas_df = notas_dyf.toDF()
 # 2. TRANSFORMAÇÕES E LIMPEZA
 # ============================================
 
-print("🔄 Aplicando transformações...")
+logger.info("Aplicando transformacoes...")
 
-# Limpar e padronizar dados
+# Limpar e padronizar
 escolas_df = (
     escolas_df
     .withColumn("nome", F.trim(F.col("nome")))
@@ -156,7 +160,7 @@ notas_df = (
     notas_df
     .withColumn("disciplina", F.trim(F.col("disciplina")))
     .withColumn("nota", F.col("nota").cast(DoubleType()))
-    # Remover notas inválidas (null ou fora do range)
+    # Remover notas invalidas
     .filter(
         (F.col("nota").isNotNull()) &
         (F.col("nota") >= 0) &
@@ -164,14 +168,13 @@ notas_df = (
     )
 )
 
-print("   ✅ Limpeza concluída")
-print()
+logger.info("Limpeza concluida")
 
 # ============================================
 # 3. JOINS - CRIAR DATASET CONSOLIDADO
 # ============================================
 
-print("🔗 Fazendo joins das tabelas...")
+logger.info("Fazendo joins das tabelas...")
 
 # Join: alunos + escolas
 alunos_escolas_df = alunos_df.join(
@@ -200,14 +203,13 @@ dados_consolidados_df = alunos_escolas_df.join(
     notas_df["nota"]
 )
 
-print(f"   ✅ Dataset consolidado: {dados_consolidados_df.count()} registros")
-print()
+logger.info(f"Dataset consolidado: {dados_consolidados_df.count()} registros")
 
 # ============================================
 # 4. AGREGAÇÕES
 # ============================================
 
-print("📊 Criando agregações...")
+logger.info("Criando agregacoes...")
 
 # Média geral por aluno
 media_alunos_df = (
@@ -255,27 +257,26 @@ estatisticas_regiao_df = (
     )
 )
 
-print("   ✅ Agregações criadas:")
-print(f"      - Média por aluno: {media_alunos_df.count()} registros")
-print(f"      - Média por disciplina: {media_disciplinas_df.count()} registros")
-print(f"      - Estatísticas por escola: {estatisticas_escolas_df.count()} registros")
-print(f"      - Estatísticas por região: {estatisticas_regiao_df.count()} registros")
-print()
+logger.info("Agregacoes criadas:")
+logger.info(f"Média por aluno: {media_alunos_df.count()} registros")
+logger.info(f"Média por disciplina: {media_disciplinas_df.count()} registros")
+logger.info(f"Estatisticas por escola: {estatisticas_escolas_df.count()} registros")
+logger.info(f"Estatisticas por regiao: {estatisticas_regiao_df.count()} registros")
 
 # ============================================
 # 5. EXPORT PARA PARQUET (S3 PROCESSED)
 # ============================================
 
-print("💾 Exportando para Parquet no S3...")
+logger.info("Exportando para Parquet no S3...")
 
-# Converter de volta para DynamicFrame para usar write methods do Glue
+# Converter para DynamicFrame
 dados_consolidados_dyf = DynamicFrame.fromDF(
     dados_consolidados_df,
     glueContext,
     "dados_consolidados_dyf"
 )
 
-# Salvar em Parquet particionado por regiao e disciplina para melhor performance
+# Salvar em Parquet particionado por regiao e disciplina
 glueContext.write_dynamic_frame.from_options(
     frame=dados_consolidados_dyf,
     connection_type="s3",
@@ -328,14 +329,13 @@ glueContext.write_dynamic_frame.from_options(
     transformation_ctx="write_estatisticas_regiao"
 )
 
-print("   ✅ Dados exportados para Parquet")
-print()
+logger.info("Dados exportados para Parquet")
 
 # ============================================
 # 6. CARREGAR DADOS AGREGADOS NO AURORA
 # ============================================
 
-print("🗄️  Carregando dados agregados no Aurora...")
+logger.info("Carregando dados agregados no Aurora...")
 
 aurora_connection_name = args['AURORA_CONNECTION_NAME']
 aurora_database_name = args['AURORA_DATABASE_NAME']
@@ -392,24 +392,18 @@ try:
         transformation_ctx="write_aurora_estatisticas_regiao"
     )
     
-    print("   ✅ Dados carregados no Aurora")
+    logger.info("Dados carregados no Aurora")
     
 except Exception as e:
-    print(f"   ⚠️  Erro ao carregar no Aurora: {str(e)}")
-    print("   Continuando... (dados já salvos em Parquet)")
-    # Não falhar o job se Aurora falhar - os dados já estão em Parquet
-
-print()
+    logger.warning(f"Erro ao carregar no Aurora: {str(e)}")
+    logger.warning("Continuando... (dados ja salvos em Parquet)")
 
 # ============================================
 # FINALIZAÇÃO
 # ============================================
 
-print("✨ Job concluído com sucesso!")
-print()
-print("📊 Resumo:")
-print(f"   - Dados consolidados: {dados_consolidados_df.count()} registros")
-print(f"   - Parquet salvos em: s3://{processed_bucket}/")
-print(f"   - Dados agregados carregados no Aurora")
+logger.info("Job concluido com sucesso")
+logger.info(f"Resumo: Dados consolidados={dados_consolidados_df.count()} registros, Parquet salvos em s3://{processed_bucket}/")
+logger.info("Dados agregados carregados no Aurora")
 
 job.commit()
