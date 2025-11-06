@@ -10,16 +10,7 @@ Este projeto provisiona uma infraestrutura completa na AWS para pipelines de dad
 ## Arquitetura
 
 ```
-┌─────────────┐
-│   S3 Raw    │ ──┐
-└─────────────┘   │
-                  │
-┌─────────────┐   │    ┌──────────────┐    ┌─────────────┐
-│ S3 Processed│ ◄─┼─── │  Glue Jobs   │ ──►│   Aurora    │
-└─────────────┘   │    │  & Crawlers  │    │ PostgreSQL  │
-                  │    └──────────────┘    └─────────────┘
-                  │           │
-                  └───────────┘
+![Texto Alternativo](caminho/para/imagem.png)
 ```
 
 ## Estrutura do Projeto
