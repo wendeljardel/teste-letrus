@@ -1,4 +1,4 @@
-# Infraestrutura AWS para Engenharia de Dados
+# Infraestrutura AWS - Teste Técnico Letrus
 
 Este projeto provisiona uma infraestrutura completa na AWS para pipelines de dados, incluindo:
 
@@ -9,9 +9,7 @@ Este projeto provisiona uma infraestrutura completa na AWS para pipelines de dad
 
 ## Arquitetura
 
-```
-<img src="docs/images/architecture-diagram.png" width="600">
-```
+![Arquitetura do Pipeline ETL](docs/images/architecture-diagram.png)
 
 ## Estrutura do Projeto
 
