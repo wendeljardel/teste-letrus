@@ -123,7 +123,7 @@ module "bastion" {
   public_subnet_id         = local.public_subnet_ids[0]
   instance_type            = "t3.micro"
   ssh_public_key           = var.bastion_ssh_public_key
-  allowed_ssh_cidr_blocks  = ["45.5.142.154/32"]
+  allowed_ssh_cidr_blocks  = var.bastion_allowed_ssh_cidr_blocks
 
   tags = local.common_tags
 }

@@ -140,6 +140,12 @@ variable "bastion_ssh_public_key" {
   default     = ""
 }
 
+variable "bastion_allowed_ssh_cidr_blocks" {
+  description = "CIDR blocks permitidos para SSH no Bastion Host (ex: [\"SEU_IP/32\"])"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]  # Permitir qualquer IP por padrão (ALTERE PARA SEU IP EM PRODUÇÃO!)
+}
+
 # VPC Variables
 variable "vpc_id" {
   description = "ID da VPC existente (deixe vazio para criar nova)"
