@@ -221,3 +221,15 @@ crash.log
 *.tfplan
 #Dados gerados localmente
 data/
+
+
+ANALYTICS_GUIDE.md
+DBAVER_SETUP.md
+DBEAVER_SETUP.md
+DBEAVER_SSH_GUIDE.md
+connect-aurora.sh
+modules/bastion/
+scripts/create_aurora_tables.sh
+scripts/glue_jobs/analytics_queries.sql
+scripts/run_pipeline.sh
+terraform.tfstate.1762391123.backup

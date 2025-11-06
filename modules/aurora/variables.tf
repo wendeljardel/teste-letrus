@@ -88,3 +88,25 @@ variable "tags" {
   default     = {}
 }
 
+variable "allow_external_access" {
+  description = "Permitir acesso externo ao Aurora (via DBeaver, etc)"
+  type        = bool
+  default     = false
+}
+
+variable "external_access_cidr_blocks" {
+  description = "CIDR blocks permitidos para acesso externo (ex: [\"0.0.0.0/0\"] para qualquer IP)"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
+variable "glue_security_group_ids" {
+  description = "IDs dos Security Groups do Glue Connection que precisam acessar o Aurora"
+  type        = list(string)
+  default     = []
+}
+
+variable "bastion_security_group_id" {
+  description = "ID do Security Group do Bastion Host"
+  type        = string
+}

@@ -64,7 +64,17 @@ variable "aurora_endpoint" {
 }
 
 variable "aurora_security_group_id" {
-  description = "ID do security group do Aurora"
+  description = "ID do security group do Aurora (usado para permitir acesso do Glue)"
+  type        = string
+}
+
+variable "vpc_id" {
+  description = "ID da VPC"
+  type        = string
+}
+
+variable "glue_connection_security_group_id" {
+  description = "ID do Security Group para a conexão Glue com Aurora"
   type        = string
 }
 
@@ -87,6 +97,18 @@ variable "aurora_engine" {
 variable "aurora_database_name" {
   description = "Nome do banco de dados Aurora"
   type        = string
+}
+
+variable "aurora_master_username" {
+  description = "Username do master do Aurora"
+  type        = string
+  sensitive   = true
+}
+
+variable "aurora_master_password" {
+  description = "Password do master do Aurora"
+  type        = string
+  sensitive   = true
 }
 
 variable "tags" {

@@ -75,6 +75,51 @@ output "aurora_master_username" {
   sensitive   = true
 }
 
+output "aurora_master_password" {
+  description = "Password do master do Aurora"
+  value       = module.aurora.master_password
+  sensitive   = true
+}
+
+# Bastion Host
+output "bastion_public_ip" {
+  description = "IP publico do Bastion Host"
+  value       = module.bastion.bastion_public_ip
+}
+
+output "bastion_ssh_command" {
+  description = "Comando SSH para conectar ao Bastion"
+  value       = module.bastion.ssh_command
+}
+
+output "dbeaver_ssh_tunnel_instructions" {
+  description = "Instrucoes para configurar SSH tunnel no DBeaver"
+  value       = <<-EOT
+  
+  === CONFIGURAR SSH TUNNEL NO DBEAVER ===
+  
+  1. Crie a chave privada em: ~/.ssh/bastion-key.pem
+  2. No DBeaver, ao conectar ao banco:
+     - Main tab:
+       * Host: localhost
+       * Port: 5432
+       * Database: datawarehouse
+       * Username: masteruser
+       * Password: ${nonsensitive(module.aurora.master_password)}
+     
+     - SSH tab:
+       * Use SSH Tunnel: ✓
+       * Host/IP: ${module.bastion.bastion_public_ip}
+       * Port: 22
+       * User Name: ec2-user
+       * Authentication Method: Public Key
+       * Private Key: ~/.ssh/bastion-key.pem
+  
+  Ou via terminal:
+  ssh -i ~/.ssh/bastion-key.pem -N -L 5432:${module.aurora.endpoint}:5432 ec2-user@${module.bastion.bastion_public_ip}
+  EOT
+}
+
 # ============================================
 # Glue Outputs
 # ============================================

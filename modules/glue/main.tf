@@ -26,15 +26,15 @@ resource "aws_glue_connection" "aurora" {
   connection_properties = {
     JDBC_CONNECTION_URL = "jdbc:${local.jdbc_prefix}://${var.aurora_endpoint}:${var.aurora_port}/${var.aurora_database_name}"
     JDBC_ENFORCE_SSL    = "true"
-    PASSWORD            = ""  # Será configurado manualmente ou via Secrets Manager
-    USERNAME            = ""  # Será configurado manualmente ou via Secrets Manager
+    PASSWORD            = var.aurora_master_password
+    USERNAME            = var.aurora_master_username
   }
 
   name = local.connection_name
 
   physical_connection_requirements {
-    availability_zone      = ""  # Deixar vazio para usar automaticamente
-    security_group_id_list = [var.aurora_security_group_id]
+    availability_zone      = data.aws_subnet.glue_subnet.availability_zone
+    security_group_id_list = [var.glue_connection_security_group_id]
     subnet_id              = length(var.database_subnet_ids) > 0 ? var.database_subnet_ids[0] : ""
   }
 
@@ -46,6 +46,11 @@ resource "aws_glue_connection" "aurora" {
   )
 }
 
+# Data source para obter a AZ da subnet automaticamente
+data "aws_subnet" "glue_subnet" {
+  id = length(var.database_subnet_ids) > 0 ? var.database_subnet_ids[0] : ""
+}
+
 # Glue Jobs
 resource "aws_glue_job" "main" {
   for_each = var.jobs
@@ -55,9 +60,13 @@ resource "aws_glue_job" "main" {
 
   command {
     script_location = replace(
-      replace(each.value.script_location, "PLACEHOLDER", var.suffix),
-      "${var.name_prefix}-scripts-${var.suffix}",
-      var.s3_scripts_bucket
+      replace(
+        replace(each.value.script_location, "PLACEHOLDER", var.suffix),
+        "${var.name_prefix}-scripts-${var.suffix}",
+        "s3://${var.s3_scripts_bucket}"
+      ),
+      "s3://s3://",
+      "s3://"
     )
     python_version  = each.value.python_version
   }
@@ -80,7 +89,6 @@ resource "aws_glue_job" "main" {
       "--S3_PROCESSED_BUCKET"     = var.s3_processed_bucket
       "--AURORA_CONNECTION_NAME"  = local.connection_name
       "--AURORA_DATABASE_NAME"    = var.aurora_database_name
-      "--AURORA_TABLE_NAME"       = ""
     } : {}
   )
 
@@ -90,6 +98,8 @@ resource "aws_glue_job" "main" {
 
   max_capacity = each.value.max_capacity
   timeout      = each.value.timeout
+  
+  connections = contains(["etl-pipeline", "etl-raw-to-processed"], each.key) ? [aws_glue_connection.aurora.name] : []
 
   tags = merge(
     var.tags,

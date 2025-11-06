@@ -32,4 +32,3 @@ output "availability_zones" {
   description = "Lista de Availability Zones usadas"
   value       = local.azs
 }
-

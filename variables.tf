@@ -122,6 +122,24 @@ variable "aurora_skip_final_snapshot" {
   default     = false
 }
 
+variable "aurora_allow_external_access" {
+  description = "Permitir acesso externo ao Aurora (via DBeaver, etc). Requer subnets públicas."
+  type        = bool
+  default     = false
+}
+
+variable "aurora_external_access_cidr_blocks" {
+  description = "CIDR blocks permitidos para acesso externo (ex: [\"0.0.0.0/0\"] para qualquer IP ou [\"SEU_IP/32\"] para IP específico)"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
+variable "bastion_ssh_public_key" {
+  description = "Chave publica SSH para acesso ao Bastion Host"
+  type        = string
+  default     = ""
+}
+
 # VPC Variables
 variable "vpc_id" {
   description = "ID da VPC existente (deixe vazio para criar nova)"

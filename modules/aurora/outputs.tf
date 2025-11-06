@@ -44,6 +44,12 @@ output "master_username" {
   sensitive   = true
 }
 
+output "master_password" {
+  description = "Password do master"
+  value       = var.master_password
+  sensitive   = true
+}
+
 output "security_group_id" {
   description = "ID do security group do Aurora"
   value       = aws_security_group.aurora.id

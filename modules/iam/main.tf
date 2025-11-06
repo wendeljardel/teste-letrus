@@ -91,6 +91,41 @@ resource "aws_iam_role_policy_attachment" "glue_service_role" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"
 }
 
+# Policy para Glue criar ENIs (necessário para Glue Connection funcionar)
+resource "aws_iam_role_policy" "glue_network" {
+  name = "${var.name_prefix}-glue-network-policy"
+  role = aws_iam_role.glue.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateNetworkInterface",
+          "ec2:DeleteNetworkInterface",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeVpcs",
+          "ec2:DescribeVpcEndpoints",
+          "ec2:DescribeRouteTables",
+          "ec2:CreateTags",
+          "ec2:DeleteTags"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateNetworkInterfacePermission"
+        ]
+        Resource = "arn:aws:ec2:*:*:network-interface/*"
+      }
+    ]
+  })
+}
+
 # IAM Role para Glue Crawlers
 resource "aws_iam_role" "crawler" {
   name = "${var.name_prefix}-crawler-role"

@@ -2,67 +2,60 @@
 -- Execute este script antes de rodar o Glue Job pela primeira vez
 
 -- Conectar ao banco de dados
--- psql -h <aurora-endpoint> -U admin -d datawarehouse
+-- psql -h <aurora-endpoint> -U masteruser -d datawarehouse
 
--- 1. Tabela: Média por aluno
-CREATE TABLE IF NOT EXISTS media_alunos (
-    aluno_id VARCHAR(50) PRIMARY KEY,
-    media_geral DECIMAL(5,2),
-    num_disciplinas INTEGER,
-    nota_maxima DECIMAL(4,1),
-    nota_minima DECIMAL(4,1),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 2. Tabela: Média por disciplina
-CREATE TABLE IF NOT EXISTS media_disciplinas (
-    disciplina VARCHAR(50) PRIMARY KEY,
-    media_nota DECIMAL(5,2),
-    num_alunos INTEGER,
-    nota_maxima DECIMAL(4,1),
-    nota_minima DECIMAL(4,1),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 3. Tabela: Estatísticas por escola
-CREATE TABLE IF NOT EXISTS estatisticas_escolas (
+-- 1. Tabela: Escola
+CREATE TABLE IF NOT EXISTS escola (
     escola_id VARCHAR(50) PRIMARY KEY,
-    escola_nome VARCHAR(255),
-    escola_rede VARCHAR(50),
-    regiao VARCHAR(50),
-    num_alunos INTEGER,
-    media_geral_escola DECIMAL(5,2),
-    total_notas INTEGER,
+    nome VARCHAR(255) NOT NULL,
+    rede VARCHAR(50) NOT NULL,
+    regiao VARCHAR(50) NOT NULL,
+    ingestion_time TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Tabela: Estatísticas por região
-CREATE TABLE IF NOT EXISTS estatisticas_regiao (
-    regiao VARCHAR(50) PRIMARY KEY,
-    num_escolas INTEGER,
-    num_alunos INTEGER,
-    media_geral_regiao DECIMAL(5,2),
+-- 2. Tabela: Aluno
+CREATE TABLE IF NOT EXISTS aluno (
+    id VARCHAR(50) PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    idade INTEGER NOT NULL,
+    genero VARCHAR(10) NOT NULL,
+    escola_id VARCHAR(50) NOT NULL,
+    ingestion_time TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_aluno_escola FOREIGN KEY (escola_id) REFERENCES escola(escola_id)
+);
+
+-- 3. Tabela: Nota
+CREATE TABLE IF NOT EXISTS nota (
+    aluno_id VARCHAR(50) NOT NULL,
+    disciplina VARCHAR(50) NOT NULL,
+    nota DECIMAL(4,1) NOT NULL CHECK (nota >= 0 AND nota <= 10),
+    ingestion_time TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (aluno_id, disciplina),
+    CONSTRAINT fk_nota_aluno FOREIGN KEY (aluno_id) REFERENCES aluno(id)
 );
 
 -- Índices para melhor performance
-CREATE INDEX IF NOT EXISTS idx_media_alunos_media_geral ON media_alunos(media_geral DESC);
-CREATE INDEX IF NOT EXISTS idx_estatisticas_escolas_regiao ON estatisticas_escolas(regiao);
-CREATE INDEX IF NOT EXISTS idx_estatisticas_escolas_rede ON estatisticas_escolas(escola_rede);
+CREATE INDEX IF NOT EXISTS idx_aluno_escola_id ON aluno(escola_id);
+CREATE INDEX IF NOT EXISTS idx_aluno_idade ON aluno(idade);
+CREATE INDEX IF NOT EXISTS idx_nota_aluno_id ON nota(aluno_id);
+CREATE INDEX IF NOT EXISTS idx_nota_disciplina ON nota(disciplina);
+CREATE INDEX IF NOT EXISTS idx_escola_regiao ON escola(regiao);
+CREATE INDEX IF NOT EXISTS idx_escola_rede ON escola(rede);
 
 -- Comentários nas tabelas
-COMMENT ON TABLE media_alunos IS 'Média geral de notas por aluno';
-COMMENT ON TABLE media_disciplinas IS 'Estatísticas de notas por disciplina';
-COMMENT ON TABLE estatisticas_escolas IS 'Estatísticas agregadas por escola';
-COMMENT ON TABLE estatisticas_regiao IS 'Estatísticas agregadas por região';
+COMMENT ON TABLE escola IS 'Tabela de escolas';
+COMMENT ON TABLE aluno IS 'Tabela de alunos';
+COMMENT ON TABLE nota IS 'Tabela de notas dos alunos por disciplina';
 
 -- Verificar tabelas criadas
 SELECT table_name, table_type 
 FROM information_schema.tables 
 WHERE table_schema = 'public' 
-  AND table_name IN ('media_alunos', 'media_disciplinas', 'estatisticas_escolas', 'estatisticas_regiao')
+  AND table_name IN ('escola', 'aluno', 'nota')
 ORDER BY table_name;

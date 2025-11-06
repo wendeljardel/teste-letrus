@@ -14,13 +14,17 @@ locals {
 
 # DB Subnet Group
 resource "aws_db_subnet_group" "aurora" {
-  name       = "${var.name_prefix}-aurora-subnet-group"
+  name       = var.allow_external_access ? "${var.name_prefix}-aurora-subnet-group-public" : "${var.name_prefix}-aurora-subnet-group"
   subnet_ids = var.database_subnet_ids
+
+  lifecycle {
+    create_before_destroy = true
+  }
 
   tags = merge(
     var.tags,
     {
-      Name = "${var.name_prefix}-aurora-subnet-group"
+      Name = var.allow_external_access ? "${var.name_prefix}-aurora-subnet-group-public" : "${var.name_prefix}-aurora-subnet-group"
     }
   )
 }
@@ -31,16 +35,35 @@ resource "aws_security_group" "aurora" {
   description = "Security group para Aurora cluster"
   vpc_id      = var.vpc_id
 
+  # Permite acesso da VPC
   ingress {
     description = "PostgreSQL/MySQL from VPC"
     from_port   = local.port
     to_port     = local.port
     protocol    = "tcp"
-    cidr_blocks = [var.vpc_id != "" ? data.aws_vpc.main.cidr_block : "0.0.0.0/0"]
+    cidr_blocks = [data.aws_vpc.main.cidr_block]
   }
 
+  # Permite acesso do Glue Connection (via Security Group)
+  ingress {
+    description     = "Acesso do Glue Connection"
+    from_port       = local.port
+    to_port         = local.port
+    protocol        = "tcp"
+    security_groups = var.glue_security_group_ids
+  }
+
+  # Permite acesso do Bastion Host (via Security Group)
+  ingress {
+    description     = "Acesso do Bastion Host"
+    from_port       = local.port
+    to_port         = local.port
+    protocol        = "tcp"
+    security_groups = [var.bastion_security_group_id]
+  }
+
+  # Saída liberada para qualquer destino
   egress {
-    description = "All outbound"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -54,6 +77,7 @@ resource "aws_security_group" "aurora" {
     }
   )
 }
+
 
 # Data source para VPC (para obter CIDR)
 data "aws_vpc" "main" {
@@ -124,7 +148,11 @@ resource "aws_rds_cluster_instance" "aurora" {
   engine             = aws_rds_cluster.aurora.engine
   engine_version     = aws_rds_cluster.aurora.engine_version
 
-  publicly_accessible = false
+  publicly_accessible = var.allow_external_access
+
+  lifecycle {
+    create_before_destroy = true
+  }
 
   tags = merge(
     var.tags,
