@@ -119,43 +119,7 @@ psql -h localhost -p 15432 -U masteruser -d datawarehouse \
   -f scripts/glue_jobs/create_aurora_tables.sql
 ```
 
-## Variáveis Principais
 
-- `project_name`: Nome do projeto (usado para naming de recursos)
-- `environment`: Ambiente (dev, homol, prod)
-- `region`: Região AWS
-- `aurora_engine`: Engine do Aurora (aurora-postgresql ou aurora-mysql)
-- `aurora_instance_class`: Classe da instância Aurora
-
-Consulte `variables.tf` para lista completa de variáveis.
-
-## Outputs
-
-Após o `terraform apply`, os seguintes outputs estarão disponíveis:
-
-- S3 bucket names (raw e processed)
-- Aurora endpoint e port
-- Glue job names e crawler names
-- IAM role ARNs
-
-Execute `terraform output` para ver todos os valores.
-
-## Executando Queries Analíticas
-
-Após executar o pipeline, você pode analisar os dados:
-
-```bash
-# Via tunnel SSH
-./connect-aurora-alt.sh
-
-# Em outro terminal
-psql -h localhost -p 15432 -U masteruser -d datawarehouse \
-  -f scripts/glue_jobs/analytics_queries.sql
-```
-
-Ou use o DBeaver para conectar e executar queries individuais.
-
-Consulte `ANALYTICS_GUIDE.md` para detalhes sobre as queries disponíveis.
 
 ## Scripts Disponíveis
 
@@ -182,33 +146,4 @@ aws s3 rm s3://case-tec-dev-scripts-letrus --recursive
 # Destruir infraestrutura
 terraform destroy
 ```
-
-
-## Módulos
-
-### S3
-Gerencia buckets para dados brutos e processados com:
-- Encryption (SSE-S3 ou SSE-KMS)
-- Versionamento
-- Lifecycle policies
-- Public access bloqueado
-
-### Aurora
-Provisiona cluster Aurora PostgreSQL/MySQL com:
-- Multi-AZ para alta disponibilidade
-- Automated backups
-- Encryption at rest
-- Security groups restritivos
-
-### Glue
-Configura jobs e crawlers do AWS Glue com:
-- IAM roles apropriadas
-- S3 paths configurados
-- Database connections
-
-### IAM
-Gerencia roles e policies com:
-- Least privilege principle
-- Trust relationships apropriadas
-- Políticas específicas para cada serviço
 
