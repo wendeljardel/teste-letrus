@@ -1,0 +1,82 @@
+# Configurações Gerais
+project_name = "case-tec-letrus"
+environment  = "dev"
+region       = "us-east-1"
+
+# Tags
+tags = {
+  Team        = "DataEngineering"
+  CostCenter  = "Engineering"
+  ManagedBy   = "Terraform"
+}
+
+# S3 Configuration
+s3_enable_versioning      = true
+s3_enable_lifecycle       = true
+s3_lifecycle_days_to_ia   = 30
+s3_lifecycle_days_to_glacier = 90
+
+# Aurora Configuration
+aurora_engine                = "aurora-postgresql"  # ou "aurora-mysql"
+aurora_engine_version        = ""  # Deixe vazio para usar a versão mais recente
+aurora_instance_class        = "db.t3.medium"  # 1 instância para economia (2+ apenas em produção para HA)
+aurora_instance_count        = 1  # Reduzido para 1 em dev (2+ apenas em produção para HA)
+aurora_database_name         = "datawarehouse"
+aurora_master_username       = "masteruser"
+aurora_master_password       = "CHANGE_ME_IN_PROD_USE_SECRETS_MANAGER"  # Use AWS Secrets Manager em produção
+aurora_backup_retention_period = 1  # Reduzido para 1 dia em dev (7+ dias em produção)
+aurora_preferred_backup_window = "03:00-04:00"
+aurora_preferred_maintenance_window = "mon:04:00-mon:05:00"
+aurora_skip_final_snapshot   = true  # false para produção
+
+# VPC Configuration
+create_vpc        = true
+vpc_cidr          = "10.0.0.0/16"
+vpc_id            = ""  # Use apenas se create_vpc = false
+availability_zones = []  # Deixe vazio para usar as default da região
+
+# Glue Jobs Configuration
+# NOTA: Os script_locations serão ajustados automaticamente pelo Terraform com o nome correto do bucket
+glue_jobs = {
+  "etl-pipeline" = {
+    script_location = "s3://data-engineering-dev-scripts-PLACEHOLDER/scripts/etl_pipeline.py"
+    python_version  = "3"
+    glue_version    = "4.0"
+    max_capacity    = 2
+    timeout         = 2880  # minutos (48 horas)
+  }
+  # Adicione mais jobs conforme necessário
+  # "outro-job" = {
+  #   script_location = "s3://data-engineering-dev-scripts-PLACEHOLDER/scripts/outro_job.py"
+  #   python_version  = "3"
+  #   glue_version    = "4.0"
+  #   max_capacity    = 2
+  #   timeout         = 2880
+  # }
+}
+
+# Glue Crawlers Configuration
+# NOTA: Use os nomes completos dos buckets ou use placeholders que serão substituídos automaticamente
+# O Terraform substituirá PLACEHOLDER pelo suffix e ajustará os paths automaticamente
+glue_crawlers = {
+  "raw-data-crawler" = {
+    s3_paths = [
+      "s3://${var.name_prefix}-raw-PLACEHOLDER/",  # Será substituído automaticamente
+    ]
+    database_name = "raw_data"  # Deixe vazio para usar o database padrão do Glue
+    schema_change_policy = {
+      update_behavior = "UPDATE_IN_DATABASE"
+      delete_behavior = "LOG"
+    }
+  }
+  "processed-data-crawler" = {
+    s3_paths = [
+      "s3://${var.name_prefix}-processed-PLACEHOLDER/",  # Será substituído automaticamente
+    ]
+    database_name = "processed_data"  # Deixe vazio para usar o database padrão do Glue
+    schema_change_policy = {
+      update_behavior = "UPDATE_IN_DATABASE"
+      delete_behavior = "LOG"
+    }
+  }
+}

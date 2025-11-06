@@ -205,3 +205,31 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Diretórios e cache local
+.terraform/
+
+# Arquivos de estado (contêm segredos)
+terraform.tfstate
+terraform.tfstate.backup
+
+# Variáveis sensíveis
+*.tfvars
+
+# Opção extra (caso use logs)
+crash.log
+*.tfplan
+#Dados gerados localmente
+data/
+
+
+ANALYTICS_GUIDE.md
+DBAVER_SETUP.md
+DBEAVER_SETUP.md
+DBEAVER_SSH_GUIDE.md
+connect-aurora.sh
+modules/bastion/
+scripts/create_aurora_tables.sh
+scripts/glue_jobs/analytics_queries.sql
+scripts/run_pipeline.sh
+terraform.tfstate.1762391123.backup
