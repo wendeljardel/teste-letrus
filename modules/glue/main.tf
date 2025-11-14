@@ -1,7 +1,7 @@
 locals {
-  database_name     = "${var.name_prefix}-catalog-db"
-  connection_name   = "${var.name_prefix}-aurora-connection"
-  jdbc_prefix       = var.aurora_engine == "postgresql" ? "postgresql" : "mysql"
+  database_name   = "${var.name_prefix}-catalog-db"
+  connection_name = "${var.name_prefix}-aurora-connection"
+  jdbc_prefix     = var.aurora_engine == "postgresql" ? "postgresql" : "mysql"
 }
 
 # Glue Data Catalog Database
@@ -68,27 +68,27 @@ resource "aws_glue_job" "main" {
       "s3://s3://",
       "s3://"
     )
-    python_version  = each.value.python_version
+    python_version = each.value.python_version
   }
 
   glue_version = each.value.glue_version
 
   default_arguments = merge(
     {
-      "--TempDir"                        = "s3://${var.s3_processed_bucket}/temp/"
-      "--enable-metrics"                 = "true"
+      "--TempDir"                          = "s3://${var.s3_processed_bucket}/temp/"
+      "--enable-metrics"                   = "true"
       "--enable-continuous-cloudwatch-log" = "true"
-      "--enable-spark-ui"                = "true"
-      "--spark-event-logs-path"          = "s3://${var.s3_processed_bucket}/spark-logs/"
-      "--job-bookmark-option"            = "job-bookmark-enable"
-      "--job-language"                   = "python"
+      "--enable-spark-ui"                  = "true"
+      "--spark-event-logs-path"            = "s3://${var.s3_processed_bucket}/spark-logs/"
+      "--job-bookmark-option"              = "job-bookmark-enable"
+      "--job-language"                     = "python"
     },
     # Parâmetros específicos para jobs ETL
     contains(["etl-pipeline", "etl-raw-to-processed"], each.key) ? {
-      "--S3_RAW_BUCKET"           = var.s3_raw_bucket
-      "--S3_PROCESSED_BUCKET"     = var.s3_processed_bucket
-      "--AURORA_CONNECTION_NAME"  = local.connection_name
-      "--AURORA_DATABASE_NAME"    = var.aurora_database_name
+      "--S3_RAW_BUCKET"          = var.s3_raw_bucket
+      "--S3_PROCESSED_BUCKET"    = var.s3_processed_bucket
+      "--AURORA_CONNECTION_NAME" = local.connection_name
+      "--AURORA_DATABASE_NAME"   = var.aurora_database_name
     } : {}
   )
 
@@ -96,9 +96,14 @@ resource "aws_glue_job" "main" {
     max_concurrent_runs = 1
   }
 
-  max_capacity = each.value.max_capacity
-  timeout      = each.value.timeout
+  # Usar worker_type e number_of_workers para maior controle e economia
+  # G.025X = 0.25 DPU por worker (mais econômico)
+  # Alternativas: G.1X = 1 DPU, G.2X = 2 DPU
+  worker_type       = each.value.worker_type
+  number_of_workers = each.value.number_of_workers
   
+  timeout = each.value.timeout
+
   connections = contains(["etl-pipeline", "etl-raw-to-processed"], each.key) ? [aws_glue_connection.aurora.name] : []
 
   tags = merge(
@@ -124,7 +129,7 @@ resource "aws_glue_crawler" "main" {
       path = replace(
         replace(
           replace(s3_target.value, "PLACEHOLDER", var.suffix),
-          "s3://${var.name_prefix}-raw-${var.suffix}", 
+          "s3://${var.name_prefix}-raw-${var.suffix}",
           "s3://${var.s3_raw_bucket}"
         ),
         "s3://${var.name_prefix}-processed-${var.suffix}",

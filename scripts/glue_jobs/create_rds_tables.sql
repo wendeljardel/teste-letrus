@@ -1,8 +1,8 @@
--- Script SQL para criar tabelas no Aurora PostgreSQL
+-- Script SQL para criar tabelas no RDS PostgreSQL
 -- Execute este script antes de rodar o Glue Job pela primeira vez
 
 -- Conectar ao banco de dados
--- psql -h <aurora-endpoint> -U masteruser -d datawarehouse
+-- psql -h <rds-endpoint> -U masteruser -d datawarehouse
 
 -- 1. Tabela: Escola
 CREATE TABLE IF NOT EXISTS escola (

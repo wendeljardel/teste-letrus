@@ -2,9 +2,11 @@
 
 Este projeto provisiona uma infraestrutura completa na AWS para pipelines de dados, incluindo:
 
-- **S3 Buckets**: Armazenamento de dados brutos e transformados
-- **Aurora Database**: Banco de dados PostgreSQL gerenciado
-- **AWS Glue**: Jobs e Crawlers para processamento de dados
+- **S3 Buckets**: Armazenamento de dados brutos e transformados (✅ FREE TIER)
+- **RDS PostgreSQL**: Banco de dados gerenciado (✅ FREE TIER: db.t3.micro, 20GB)
+- **AWS Glue**: Jobs e Crawlers para processamento de dados (otimizado: 0.5 DPU)
+- **Bastion Host**: EC2 para acesso seguro ao RDS (✅ FREE TIER: t3.micro)
+- **VPC**: 2 AZs, 1 NAT Gateway, VPC Endpoint S3 (otimizado para dev)
 - **IAM**: Roles e políticas com princípio de menor privilégio
 
 ## Arquitetura
@@ -25,19 +27,49 @@ Este projeto provisiona uma infraestrutura completa na AWS para pipelines de dad
 ├── scripts/             # Scripts Python e Bash
 │   ├── glue_jobs/       # Scripts Glue e SQL
 │   │   ├── etl_pipeline.py
-│   │   ├── create_aurora_tables.sql
+│   │   ├── create_rds_tables.sql      # ✅ Renomeado de create_aurora_tables.sql
 │   │   └── analytics_queries.sql
 │   ├── generate_synthetic_data.py
 │   ├── upload_to_s3.py
 │   ├── run_pipeline.sh
-│   └── create_aurora_tables.sh
+│   └── create_rds_tables.sh           # ✅ Renomeado de create_aurora_tables.sh
 ├── main.tf              # Configuração principal
 ├── variables.tf         # Variáveis
 ├── outputs.tf           # Outputs
-├── terraform.tfvars     # Valores das variáveis (não versionado)
-├── ANALYTICS_GUIDE.md   # Guia de queries analíticas
-└── README.md            # Este arquivo
+├── terraform.tfvars            # Valores das variáveis (não versionado)
+├── FREE_TIER_OPTIMIZATION.md   # 🎯 Otimização Free Tier e custos mínimos
+├── COST_OPTIMIZATION.md        # Otimização de VPC (AZs e NAT)
+├── ANALYTICS_GUIDE.md          # Guia de queries analíticas
+└── README.md                   # Este arquivo
 ```
+
+## 💰 Otimização de Custos
+
+Este projeto implementa **otimização AGRESSIVA para FREE TIER e custos mínimos**:
+
+### 🎯 Otimização Free Tier (Atual)
+| Item | Configuração | Status |
+|------|--------------|--------|
+| **RDS** | db.t3.micro, 20GB | ✅ FREE TIER |
+| **Bastion** | EC2 t3.micro | ✅ FREE TIER |
+| **S3** | <5GB, lifecycle agressivo | ✅ FREE TIER |
+| **Glue** | 2 DPU (2 × G.1X) | Otimizado |
+| **VPC Endpoint S3** | Gateway | ✅ GRÁTIS |
+| **Custo Total** | ~$35-50/mês | **60-70% economia** |
+
+📖 **[Veja detalhes completos em FREE_TIER_OPTIMIZATION.md](FREE_TIER_OPTIMIZATION.md)**
+
+### 🏗️ Otimização VPC por Ambiente
+| Ambiente | AZs | NAT Gateways | Custo VPC/mês |
+|----------|-----|--------------|---------------|
+| **Dev** | 2 | 1 | ~$35 |
+| **Prod** | 3 | 3 | ~$100 |
+
+📖 **[Veja detalhes em COST_OPTIMIZATION.md](COST_OPTIMIZATION.md)**
+
+**✅ Economia anual estimada em dev: ~$1,392**
+
+Para detalhes completos sobre as otimizações, veja **[COST_OPTIMIZATION.md](COST_OPTIMIZATION.md)**
 
 ## Pré-requisitos
 
@@ -121,6 +153,7 @@ psql -h localhost -p 15432 -U masteruser -d datawarehouse \
 | `connect-aurora-alt.sh` | Abre tunnel SSH para Aurora (porta 15432) |
 | `etl_pipeline.py` | Job Glue que processa dados e carrega no Aurora |
 | `analytics_queries.sql` | Queries analíticas para análise de dados |
+| `COST_OPTIMIZATION.md` | Documentação completa de otimização de custos |
 
 ## Limpeza
 

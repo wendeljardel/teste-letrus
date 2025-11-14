@@ -1,46 +1,46 @@
 output "cluster_id" {
-  description = "ID do cluster Aurora"
-  value       = aws_rds_cluster.aurora.cluster_identifier
+  description = "ID da instância RDS"
+  value       = aws_db_instance.main.identifier
 }
 
 output "cluster_arn" {
-  description = "ARN do cluster Aurora"
-  value       = aws_rds_cluster.aurora.arn
+  description = "ARN da instância RDS"
+  value       = aws_db_instance.main.arn
 }
 
 output "cluster_endpoint" {
-  description = "Endpoint do cluster Aurora (writer)"
-  value       = aws_rds_cluster.aurora.endpoint
+  description = "Endpoint da instância RDS (writer)"
+  value       = aws_db_instance.main.endpoint
 }
 
 output "cluster_reader_endpoint" {
-  description = "Endpoint do cluster Aurora (reader)"
-  value       = aws_rds_cluster.aurora.reader_endpoint
+  description = "Endpoint da instância RDS (reader) - mesmo que endpoint em instância única"
+  value       = aws_db_instance.main.endpoint
 }
 
 output "endpoint" {
-  description = "Endpoint do cluster Aurora (alias para cluster_endpoint)"
-  value       = aws_rds_cluster.aurora.endpoint
+  description = "Endpoint da instância RDS (alias para cluster_endpoint)"
+  value       = aws_db_instance.main.address
 }
 
 output "reader_endpoint" {
-  description = "Reader endpoint do cluster Aurora"
-  value       = aws_rds_cluster.aurora.reader_endpoint
+  description = "Reader endpoint da instância RDS - mesmo que endpoint em instância única"
+  value       = aws_db_instance.main.address
 }
 
 output "port" {
-  description = "Porta do cluster Aurora"
-  value       = aws_rds_cluster.aurora.port
+  description = "Porta da instância RDS"
+  value       = aws_db_instance.main.port
 }
 
 output "database_name" {
   description = "Nome do banco de dados"
-  value       = aws_rds_cluster.aurora.database_name
+  value       = aws_db_instance.main.db_name
 }
 
 output "master_username" {
   description = "Username do master"
-  value       = aws_rds_cluster.aurora.master_username
+  value       = aws_db_instance.main.username
   sensitive   = true
 }
 
@@ -51,7 +51,7 @@ output "master_password" {
 }
 
 output "security_group_id" {
-  description = "ID do security group do Aurora"
+  description = "ID do security group do RDS"
   value       = aws_security_group.aurora.id
 }
 

@@ -110,3 +110,15 @@ variable "bastion_security_group_id" {
   description = "ID do Security Group do Bastion Host"
   type        = string
 }
+
+variable "allocated_storage" {
+  description = "Storage inicial alocado em GB (FREE TIER: até 20GB)"
+  type        = number
+  default     = 20
+}
+
+variable "max_allocated_storage" {
+  description = "Storage máximo para autoscaling em GB (0 = desabilitado)"
+  type        = number
+  default     = 0
+}

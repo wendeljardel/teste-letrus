@@ -66,7 +66,7 @@ resource "aws_iam_role_policy" "glue" {
         Resource = var.glue_database_arn != "" ? [
           var.glue_database_arn,
           "${var.glue_database_arn}/*"
-        ] : [
+          ] : [
           "arn:aws:glue:*:*:catalog",
           "arn:aws:glue:*:*:database/*",
           "arn:aws:glue:*:*:table/*/*"
@@ -193,7 +193,7 @@ resource "aws_iam_role_policy" "crawler" {
         Resource = var.glue_database_arn != "" ? [
           var.glue_database_arn,
           "${var.glue_database_arn}/*"
-        ] : [
+          ] : [
           "arn:aws:glue:*:*:catalog",
           "arn:aws:glue:*:*:database/*",
           "arn:aws:glue:*:*:table/*/*"
