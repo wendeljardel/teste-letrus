@@ -1,15 +1,17 @@
 # Data source para obter versão mais recente se não especificada
 data "aws_rds_engine_version" "default" {
-  engine  = var.engine
+  engine  = var.engine == "aurora-postgresql" ? "postgres" : (var.engine == "aurora-mysql" ? "mysql" : var.engine)
   version = var.engine_version != "" ? var.engine_version : null
 }
 
 locals {
-  engine_version        = var.engine_version != "" ? var.engine_version : data.aws_rds_engine_version.default.version
-  port                  = var.engine == "aurora-postgresql" ? 5432 : 3306
-  family                = data.aws_rds_engine_version.default.parameter_group_family
-  cluster_identifier    = "${var.name_prefix}-aurora-${var.suffix}"
-  final_snapshot_identifier = "${var.name_prefix}-aurora-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
+  # Converter engine Aurora para RDS tradicional (free tier)
+  actual_engine             = var.engine == "aurora-postgresql" ? "postgres" : (var.engine == "aurora-mysql" ? "mysql" : var.engine)
+  engine_version            = var.engine_version != "" ? var.engine_version : data.aws_rds_engine_version.default.version
+  port                      = contains(["aurora-postgresql", "postgres"], var.engine) ? 5432 : 3306
+  family                    = data.aws_rds_engine_version.default.parameter_group_family
+  instance_identifier       = "${var.name_prefix}-rds-${var.suffix}"
+  final_snapshot_identifier = "${var.name_prefix}-rds-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
 }
 
 # DB Subnet Group
@@ -29,10 +31,10 @@ resource "aws_db_subnet_group" "aurora" {
   )
 }
 
-# Security Group para Aurora
+# Security Group para RDS
 resource "aws_security_group" "aurora" {
-  name        = "${var.name_prefix}-aurora-sg"
-  description = "Security group para Aurora cluster"
+  name        = "${var.name_prefix}-rds-sg"
+  description = "Security group para RDS instance"
   vpc_id      = var.vpc_id
 
   # Permite acesso da VPC
@@ -73,7 +75,7 @@ resource "aws_security_group" "aurora" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.name_prefix}-aurora-sg"
+      Name = "${var.name_prefix}-rds-sg"
     }
   )
 }
@@ -84,11 +86,11 @@ data "aws_vpc" "main" {
   id = var.vpc_id
 }
 
-# Cluster Parameter Group
-resource "aws_rds_cluster_parameter_group" "aurora" {
-  name        = "${var.name_prefix}-aurora-params"
+# Parameter Group para RDS tradicional
+resource "aws_db_parameter_group" "main" {
+  name        = "${var.name_prefix}-rds-params"
   family      = local.family
-  description = "Parameter group para Aurora cluster ${var.name_prefix}"
+  description = "Parameter group para RDS ${var.name_prefix}"
 
   parameter {
     name  = "timezone"
@@ -98,66 +100,69 @@ resource "aws_rds_cluster_parameter_group" "aurora" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.name_prefix}-aurora-params"
+      Name = "${var.name_prefix}-rds-params"
     }
   )
 }
 
-# Aurora Cluster
-resource "aws_rds_cluster" "aurora" {
-  cluster_identifier              = local.cluster_identifier
-  engine                          = var.engine
-  engine_version                  = local.engine_version
-  database_name                   = var.database_name
-  master_username                 = var.master_username
-  master_password                 = var.master_password
-  db_subnet_group_name            = aws_db_subnet_group.aurora.name
-  db_cluster_parameter_group_name = aws_rds_cluster_parameter_group.aurora.name
-  vpc_security_group_ids          = [aws_security_group.aurora.id]
-  
-  # Backup e Maintenance
-  backup_retention_period         = var.backup_retention_period
-  preferred_backup_window         = var.preferred_backup_window
-  preferred_maintenance_window    = var.preferred_maintenance_window
-  
-  # Encryption
-  storage_encrypted               = true
-  enabled_cloudwatch_logs_exports = var.engine == "aurora-postgresql" ? ["postgresql"] : ["mysql", "audit", "error", "general", "slowquery"]
-  
-  # Snapshot
-  skip_final_snapshot             = var.skip_final_snapshot
-  final_snapshot_identifier       = var.skip_final_snapshot ? null : local.final_snapshot_identifier
-  
+# RDS Instance (substituindo Aurora Cluster para economia - FREE TIER elegível)
+# FREE TIER: 750h/mês de db.t3.micro, db.t2.micro ou db.t4g.micro
+# FREE TIER: 20GB de storage SSD
+# FREE TIER: 20GB de backups
+resource "aws_db_instance" "main" {
+  identifier     = local.instance_identifier
+  engine         = local.actual_engine
+  engine_version = local.engine_version
+  instance_class = var.instance_class
+
+  # Database configuration
+  db_name  = var.database_name
+  username = var.master_username
+  password = var.master_password
+
+  # Storage (FREE TIER: 20GB)
+  allocated_storage     = var.allocated_storage
+  max_allocated_storage = var.max_allocated_storage
+  storage_type          = "gp3" # gp3 é mais econômico que gp2
+  storage_encrypted     = true
+
+  # Network
+  db_subnet_group_name   = aws_db_subnet_group.aurora.name
+  vpc_security_group_ids = [aws_security_group.aurora.id]
+  publicly_accessible    = var.allow_external_access
+  port                   = local.port
+
+  # Backup (FREE TIER: 1 dia de retenção incluso)
+  backup_retention_period  = var.backup_retention_period
+  backup_window            = var.preferred_backup_window
+  maintenance_window       = var.preferred_maintenance_window
+  skip_final_snapshot      = var.skip_final_snapshot
+  final_snapshot_identifier = var.skip_final_snapshot ? null : local.final_snapshot_identifier
+
+  # Parameter group
+  parameter_group_name = aws_db_parameter_group.main.name
+
+  # Monitoring
+  enabled_cloudwatch_logs_exports = contains(["postgres", "aurora-postgresql"], var.engine) ? ["postgresql", "upgrade"] : ["error", "general", "slowquery"]
+  monitoring_interval             = 0 # Desabilitar enhanced monitoring para economia (custa $0.30/instância/mês)
+
+  # Performance
+  performance_insights_enabled = false # Desabilitar para economia (custa extra)
+
   # High Availability
-  deletion_protection             = false
-  
-  tags = merge(
-    var.tags,
-    {
-      Name = local.cluster_identifier
-    }
-  )
-}
+  multi_az            = false # Desabilitar Multi-AZ em dev para economia (~2x o custo)
+  deletion_protection = false
 
-# Aurora Instances
-resource "aws_rds_cluster_instance" "aurora" {
-  count              = var.instance_count
-  identifier         = "${local.cluster_identifier}-${count.index + 1}"
-  cluster_identifier = aws_rds_cluster.aurora.id
-  instance_class     = var.instance_class
-  engine             = aws_rds_cluster.aurora.engine
-  engine_version     = aws_rds_cluster.aurora.engine_version
+  # Auto minor version upgrade
+  auto_minor_version_upgrade = true
 
-  publicly_accessible = var.allow_external_access
-
-  lifecycle {
-    create_before_destroy = true
-  }
+  # Copiar tags para snapshots
+  copy_tags_to_snapshot = true
 
   tags = merge(
     var.tags,
     {
-      Name = "${local.cluster_identifier}-${count.index + 1}"
+      Name = local.instance_identifier
     }
   )
 }

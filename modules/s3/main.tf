@@ -5,8 +5,8 @@ resource "aws_s3_bucket" "raw" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.name_prefix}-raw-${var.suffix}"
-      BucketType  = "raw-data"
+      Name       = "${var.name_prefix}-raw-${var.suffix}"
+      BucketType = "raw-data"
     }
   )
 }
@@ -67,6 +67,22 @@ resource "aws_s3_bucket_lifecycle_configuration" "raw" {
       storage_class = "GLACIER"
     }
   }
+
+  # Expirar objetos antigos automaticamente (economia de storage)
+  # Só ativar se lifecycle_days_to_expire > 0
+  dynamic "rule" {
+    for_each = var.lifecycle_days_to_expire > 0 ? [1] : []
+    content {
+      id     = "expire-old-objects"
+      status = "Enabled"
+
+      filter {}
+
+      expiration {
+        days = var.lifecycle_days_to_expire
+      }
+    }
+  }
 }
 
 # Bucket S3 para dados processados
@@ -76,8 +92,8 @@ resource "aws_s3_bucket" "processed" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.name_prefix}-processed-${var.suffix}"
-      BucketType  = "processed-data"
+      Name       = "${var.name_prefix}-processed-${var.suffix}"
+      BucketType = "processed-data"
     }
   )
 }
@@ -138,6 +154,49 @@ resource "aws_s3_bucket_lifecycle_configuration" "processed" {
       storage_class = "GLACIER"
     }
   }
+
+  # Expirar objetos antigos automaticamente (economia de storage)
+  # Só ativar se lifecycle_days_to_expire > 0
+  dynamic "rule" {
+    for_each = var.lifecycle_days_to_expire > 0 ? [1] : []
+    content {
+      id     = "expire-old-objects"
+      status = "Enabled"
+
+      filter {}
+
+      expiration {
+        days = var.lifecycle_days_to_expire
+      }
+    }
+  }
+
+  # Limpar arquivos temporários do Glue mais rapidamente
+  rule {
+    id     = "cleanup-temp-files"
+    status = "Enabled"
+
+    filter {
+      prefix = "temp/"
+    }
+
+    expiration {
+      days = 7 # Deletar arquivos temp após 7 dias
+    }
+  }
+
+  rule {
+    id     = "cleanup-spark-logs"
+    status = "Enabled"
+
+    filter {
+      prefix = "spark-logs/"
+    }
+
+    expiration {
+      days = 30 # Deletar logs do Spark após 30 dias
+    }
+  }
 }
 
 # Bucket S3 para scripts do Glue
@@ -147,8 +206,8 @@ resource "aws_s3_bucket" "scripts" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.name_prefix}-scripts-${var.suffix}"
-      BucketType  = "glue-scripts"
+      Name       = "${var.name_prefix}-scripts-${var.suffix}"
+      BucketType = "glue-scripts"
     }
   )
 }

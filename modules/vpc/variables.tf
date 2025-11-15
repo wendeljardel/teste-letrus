@@ -15,6 +15,17 @@ variable "azs" {
   default     = null
 }
 
+variable "environment" {
+  description = "Ambiente (dev, staging, prod) - usado para otimização de custos"
+  type        = string
+  default     = "dev"
+
+  validation {
+    condition     = contains(["dev", "staging", "prod"], var.environment)
+    error_message = "Environment deve ser: dev, staging ou prod"
+  }
+}
+
 variable "tags" {
   description = "Tags para aplicar aos recursos"
   type        = map(string)

@@ -32,6 +32,12 @@ variable "lifecycle_days_to_glacier" {
   default     = 90
 }
 
+variable "lifecycle_days_to_expire" {
+  description = "Dias até expirar/deletar objetos (0 = nunca expirar)"
+  type        = number
+  default     = 0
+}
+
 variable "tags" {
   description = "Tags para aplicar aos buckets"
   type        = map(string)

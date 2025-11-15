@@ -11,11 +11,12 @@ variable "suffix" {
 variable "jobs" {
   description = "Mapa de jobs do Glue a serem criados"
   type = map(object({
-    script_location = string
-    python_version  = optional(string, "3")
-    glue_version    = optional(string, "4.0")
-    max_capacity    = optional(number, 2)
-    timeout         = optional(number, 2880)
+    script_location   = string
+    python_version    = optional(string, "3")
+    glue_version      = optional(string, "4.0")
+    worker_type       = optional(string, "G.1X") # G.1X = 1 DPU (mínimo para ETL)
+    number_of_workers = optional(number, 2)      # 2 workers × 1 DPU = 2 DPU total
+    timeout           = optional(number, 2880)
   }))
   default = {}
 }
@@ -23,8 +24,8 @@ variable "jobs" {
 variable "crawlers" {
   description = "Mapa de crawlers do Glue a serem criados"
   type = map(object({
-    s3_paths         = list(string)
-    database_name    = optional(string, "")
+    s3_paths      = list(string)
+    database_name = optional(string, "")
     schema_change_policy = optional(object({
       update_behavior = optional(string, "UPDATE_IN_DATABASE")
       delete_behavior = optional(string, "LOG")

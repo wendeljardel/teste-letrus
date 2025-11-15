@@ -1,73 +1,130 @@
+# ========================================
+# 🎯 CONFIGURAÇÃO OTIMIZADA PARA FREE TIER
+# ========================================
+# Este arquivo contém configurações otimizadas para CUSTOS MÍNIMOS
+# Recursos elegíveis para AWS Free Tier estão marcados com ✅
+#
+# 📖 Para detalhes completos, veja: FREE_TIER_OPTIMIZATION.md
+#
+# Custo estimado com estas configurações: ~$35-50/mês (60-70% economia)
+# ========================================
+
 # Configurações Gerais
-project_name = "case-tec-letrus"
+project_name = "case-tec"
 environment  = "dev"
 region       = "us-east-1"
 
-# Tags
+# Tags para Cost Allocation
 tags = {
-  Team        = "DataEngineering"
-  CostCenter  = "Engineering"
-  ManagedBy   = "Terraform"
+  Team       = "DataEngineering"
+  CostCenter = "Engineering"
+  ManagedBy  = "Terraform"
 }
 
-# S3 Configuration
-s3_enable_versioning      = true
-s3_enable_lifecycle       = true
-s3_lifecycle_days_to_ia   = 30
-s3_lifecycle_days_to_glacier = 90
+# ========================================
+# S3 Configuration (otimizado para FREE TIER)
+# ========================================
+# FREE TIER: 5GB de armazenamento Standard
+# FREE TIER: 20,000 GET requests/mês
+# FREE TIER: 2,000 PUT requests/mês
+# PERMANENTE (não expira após 12 meses!)
+s3_enable_versioning         = false # ✅ Desabilitado em dev (economiza 50% storage)
+s3_enable_lifecycle          = true  # Mover dados para classes mais baratas
+s3_lifecycle_days_to_ia      = 30    # ⚠️ MÍNIMO 30 dias (requisito AWS para Standard-IA)
+s3_lifecycle_days_to_glacier = 60    # ✅ 60 dias para Glacier (85% mais barato)
+s3_lifecycle_days_to_expire  = 365   # ✅ Deletar após 1 ano (0 = nunca expirar)
 
-# Aurora Configuration
-aurora_engine                = "aurora-postgresql"  # ou "aurora-mysql"
-aurora_engine_version        = ""  # Deixe vazio para usar a versão mais recente
-aurora_instance_class        = "db.t3.medium"  # 1 instância para economia
-aurora_instance_count        = 1  # Reduzido para 1 em dev
-aurora_database_name         = "datawarehouse"
-aurora_master_username       = "masteruser"
-aurora_master_password       = "CHANGE_ME_IN_PROD_USE_SECRETS_MANAGER"  # Use AWS Secrets Manager em produção
-aurora_backup_retention_period = 1  # Reduzido para 1 dia em dev (7+ dias em produção)
-aurora_preferred_backup_window = "03:00-04:00"
+# ========================================
+# RDS Configuration (otimizado para FREE TIER)
+# ========================================
+# ⚠️ NOTA: Aurora foi SUBSTITUÍDO por RDS PostgreSQL tradicional
+# 
+# FREE TIER (válido por 12 meses):
+# ✅ 750 horas/mês de db.t3.micro, db.t2.micro ou db.t4g.micro
+# ✅ 20 GB de armazenamento SSD (General Purpose)
+# ✅ 20 GB de backups e snapshots
+# 
+# Após 12 meses: ~$12-15/mês (ainda muito mais barato que Aurora ~$62/mês)
+aurora_engine                       = "aurora-postgresql"          # Será convertido para "postgres"
+aurora_engine_version               = ""                           # Deixe vazio para versão mais recente
+aurora_instance_class               = "db.t3.micro"                # ✅ FREE TIER elegível
+aurora_instance_count               = 1                            # Instância única
+aurora_allocated_storage            = 20                           # ✅ FREE TIER: 20GB
+aurora_max_allocated_storage        = 0                            # Desabilitado (sem autoscaling)
+aurora_database_name                = "datawarehouse"
+aurora_master_username              = "masteruser"
+aurora_master_password              = "CHANGE_ME_USE_SECRETS_MANAGER" # ⚠️ Use AWS Secrets Manager!
+aurora_backup_retention_period      = 1                            # ✅ FREE TIER: 1 dia incluso
+aurora_preferred_backup_window      = "03:00-04:00"
 aurora_preferred_maintenance_window = "mon:04:00-mon:05:00"
-aurora_skip_final_snapshot   = true  # false para produção
+aurora_skip_final_snapshot          = true                         # false para produção
+aurora_allow_external_access        = false                        # RDS em subnet privada
+aurora_external_access_cidr_blocks  = []                           # Sem acesso direto externo
 
-# Bastion Host Configuration (para acesso ao Aurora em subnet privada)
-bastion_ssh_public_key = ""  # Cole sua chave SSH pública aqui
-bastion_allowed_ssh_cidr_blocks = ["0.0.0.0/0"]  # IMPORTANTE: Substitua por seu IP público (ex: ["203.0.113.0/32"])
+# ========================================
+# Bastion Host Configuration (✅ FREE TIER)
+# ========================================
+# FREE TIER: 750 horas/mês de t2.micro ou t3.micro (12 meses)
+# Para acesso seguro ao RDS via SSH tunnel
+bastion_ssh_public_key = ""  # ⚠️ OBRIGATÓRIO: Cole sua chave SSH pública aqui
+# Exemplo: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ... seu-email@example.com
 
-# VPC Configuration
-create_vpc        = true
-vpc_cidr          = "10.0.0.0/16"
-vpc_id            = ""  # Use apenas se create_vpc = false
-availability_zones = []  # Deixe vazio para usar as default da região
+bastion_allowed_ssh_cidr_blocks = ["0.0.0.0/0"]  
+# ⚠️ IMPORTANTE: Substitua por seu IP público para segurança:
+# Exemplo: ["203.0.113.42/32"]  # Apenas seu IP
+# Para obter seu IP: curl ifconfig.me
 
+# ========================================
+# VPC Configuration (otimizado para dev)
+# ========================================
+# OTIMIZAÇÃO: 2 AZs + 1 NAT Gateway em dev (economia ~$116/mês vs 3 AZs + 3 NAT)
+# Produção: 3 AZs + 3 NAT Gateways (alta disponibilidade)
+create_vpc         = true
+vpc_cidr           = "10.0.0.0/16"
+vpc_id             = ""  # Use apenas se create_vpc = false
+availability_zones = []  # Deixe vazio: 2 AZs em dev, 3 AZs em prod
+
+# ========================================
 # Glue Jobs Configuration
-# NOTA: Os script_locations serão ajustados automaticamente pelo Terraform com o nome correto do bucket
+# ========================================
+# ⚠️ IMPORTANTE: G.025X só funciona para Glue Streaming jobs
+# Para ETL jobs, o mínimo é G.1X (1 DPU por worker)
+#
+# CONFIGURAÇÃO:
+# - 2 workers × G.1X = 2 DPU total
+# - Custo: 2 DPU × $0.44/h = $0.88/hora
+#
+# NOTA: Os script_locations serão ajustados automaticamente pelo Terraform
 glue_jobs = {
   "etl-pipeline" = {
-    script_location = "s3://data-engineering-dev-scripts-PLACEHOLDER/scripts/etl_pipeline.py"
-    python_version  = "3"
-    glue_version    = "4.0"
-    max_capacity    = 2
-    timeout         = 2880  # minutos (48 horas)
+    script_location   = "s3://case-tec-dev-scripts-PLACEHOLDER/scripts/etl_pipeline.py"
+    python_version    = "3"
+    glue_version      = "4.0"
+    worker_type       = "G.1X"    # 1 DPU/worker (mínimo para ETL)
+    number_of_workers = 2         # Total: 2 × 1 = 2 DPU
+    timeout           = 2880      # minutos (48 horas)
   }
   # Adicione mais jobs conforme necessário
   # "outro-job" = {
-  #   script_location = "s3://data-engineering-dev-scripts-PLACEHOLDER/scripts/outro_job.py"
-  #   python_version  = "3"
-  #   glue_version    = "4.0"
-  #   max_capacity    = 2
-  #   timeout         = 2880
+  #   script_location   = "s3://case-tec-dev-scripts-PLACEHOLDER/scripts/outro_job.py"
+  #   python_version    = "3"
+  #   glue_version      = "4.0"
+  #   worker_type       = "G.1X"
+  #   number_of_workers = 2
+  #   timeout           = 2880
   # }
 }
 
+# ========================================
 # Glue Crawlers Configuration
-# NOTA: Use os nomes completos dos buckets ou use placeholders que serão substituídos automaticamente
-# O Terraform substituirá PLACEHOLDER pelo suffix e ajustará os paths automaticamente
+# ========================================
+# NOTA: Paths S3 serão substituídos automaticamente pelo Terraform
 glue_crawlers = {
   "raw-data-crawler" = {
     s3_paths = [
-      "s3://${var.name_prefix}-raw-PLACEHOLDER/",  # Será substituído automaticamente
+      "s3://case-tec-dev-raw-PLACEHOLDER/",  # Substituído automaticamente
     ]
-    database_name = "raw_data"  # Deixe vazio para usar o database padrão do Glue
+    database_name = "raw_data"  # Deixe vazio para usar database padrão
     schema_change_policy = {
       update_behavior = "UPDATE_IN_DATABASE"
       delete_behavior = "LOG"
@@ -75,12 +132,51 @@ glue_crawlers = {
   }
   "processed-data-crawler" = {
     s3_paths = [
-      "s3://${var.name_prefix}-processed-PLACEHOLDER/",  # Será substituído automaticamente
+      "s3://case-tec-dev-processed-PLACEHOLDER/",  # Substituído automaticamente
     ]
-    database_name = "processed_data"  # Deixe vazio para usar o database padrão do Glue
+    database_name = "processed_data"
     schema_change_policy = {
       update_behavior = "UPDATE_IN_DATABASE"
       delete_behavior = "LOG"
     }
   }
 }
+
+# ========================================
+# 📖 DOCUMENTAÇÃO ADICIONAL
+# ========================================
+# 
+# FREE_TIER_OPTIMIZATION.md  → Detalhes completos de otimização
+# COST_OPTIMIZATION.md       → Otimização de VPC (AZs e NAT)
+# ANALYTICS_GUIDE.md         → Guia de queries analíticas
+# README.md                  → Overview do projeto
+#
+# ========================================
+# 💰 CUSTO ESTIMADO (DEV)
+# ========================================
+# 
+# RDS db.t3.micro:            ✅ $0 (FREE TIER 12 meses)
+# Bastion t3.micro:           ✅ $0 (FREE TIER 12 meses)
+# S3 (<5GB):                  ✅ $0 (FREE TIER permanente)
+# VPC Endpoint S3:            ✅ $0 (Gateway = grátis)
+# NAT Gateway:                ~$32/mês (inevitável)
+# NAT Data Transfer:          ~$2-5/mês (reduzido com VPC Endpoint)
+# Glue Jobs (sob demanda):    ~$0-10/mês (depende de execuções)
+# CloudWatch Logs (<5GB):     ✅ $0 (FREE TIER)
+# 
+# TOTAL: ~$35-50/mês
+# ECONOMIA vs configuração original: 60-70% (~$70-110/mês)
+# 
+# ========================================
+# ⚠️ IMPORTANTE
+# ========================================
+# 
+# 1. Free Tier RDS/EC2 é válido por 12 MESES após criar conta AWS
+# 2. Após 12 meses, RDS db.t3.micro custa ~$12-15/mês (ainda barato!)
+# 3. S3 Free Tier é PERMANENTE (não expira)
+# 4. NAT Gateway NÃO tem Free Tier ($32/mês inevitável)
+# 5. SEMPRE use AWS Secrets Manager para senhas em produção
+# 6. SEMPRE restrinja bastion_allowed_ssh_cidr_blocks ao seu IP
+# 7. SEMPRE configure AWS Budgets para alertas de custo
+# 
+# ========================================

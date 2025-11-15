@@ -39,15 +39,26 @@ variable "s3_enable_lifecycle" {
 }
 
 variable "s3_lifecycle_days_to_ia" {
-  description = "Número de dias antes de mover objetos para IA"
+  description = "Número de dias antes de mover objetos para IA (MÍNIMO 30 dias - requisito AWS)"
   type        = number
   default     = 30
+
+  validation {
+    condition     = var.s3_lifecycle_days_to_ia >= 30
+    error_message = "S3 Standard-IA requer MÍNIMO 30 dias. Use 30 ou mais."
+  }
 }
 
 variable "s3_lifecycle_days_to_glacier" {
   description = "Número de dias antes de mover objetos para Glacier"
   type        = number
   default     = 90
+}
+
+variable "s3_lifecycle_days_to_expire" {
+  description = "Número de dias antes de expirar/deletar objetos (0 = nunca expirar)"
+  type        = number
+  default     = 0
 }
 
 # Aurora Variables
@@ -68,15 +79,27 @@ variable "aurora_engine_version" {
 }
 
 variable "aurora_instance_class" {
-  description = "Classe da instância Aurora"
+  description = "Classe da instância RDS (FREE TIER: db.t3.micro, db.t2.micro ou db.t4g.micro)"
   type        = string
-  default     = "db.t3.medium"
+  default     = "db.t3.micro"
 }
 
 variable "aurora_instance_count" {
-  description = "Número de instâncias no cluster Aurora"
+  description = "Número de instâncias no cluster (mantido para compatibilidade, mas RDS usa instância única)"
   type        = number
-  default     = 2
+  default     = 1
+}
+
+variable "aurora_allocated_storage" {
+  description = "Storage inicial alocado em GB (FREE TIER: até 20GB)"
+  type        = number
+  default     = 20
+}
+
+variable "aurora_max_allocated_storage" {
+  description = "Storage máximo para autoscaling em GB (0 = desabilitado, recomendado para dev)"
+  type        = number
+  default     = 0
 }
 
 variable "aurora_database_name" {
@@ -143,7 +166,7 @@ variable "bastion_ssh_public_key" {
 variable "bastion_allowed_ssh_cidr_blocks" {
   description = "CIDR blocks permitidos para SSH no Bastion Host (ex: [\"SEU_IP/32\"])"
   type        = list(string)
-  default     = ["0.0.0.0/0"]  # Permitir qualquer IP por padrão (ALTERE PARA SEU IP EM PRODUÇÃO!)
+  default     = ["0.0.0.0/0"] # Permitir qualquer IP por padrão (ALTERE PARA SEU IP EM PRODUÇÃO!)
 }
 
 # VPC Variables
@@ -175,11 +198,12 @@ variable "availability_zones" {
 variable "glue_jobs" {
   description = "Mapa de jobs do Glue a serem criados"
   type = map(object({
-    script_location = string
-    python_version  = optional(string, "3")
-    glue_version    = optional(string, "4.0")
-    max_capacity    = optional(number, 2)
-    timeout         = optional(number, 2880)
+    script_location   = string
+    python_version    = optional(string, "3")
+    glue_version      = optional(string, "4.0")
+    worker_type       = optional(string, "G.1X") # G.1X = 1 DPU (mínimo para ETL)
+    number_of_workers = optional(number, 2)      # Total: 2 × 1 = 2 DPU
+    timeout           = optional(number, 2880)
   }))
   default = {}
 }
@@ -187,8 +211,8 @@ variable "glue_jobs" {
 variable "glue_crawlers" {
   description = "Mapa de crawlers do Glue a serem criados"
   type = map(object({
-    s3_paths         = list(string)
-    database_name    = optional(string, "")
+    s3_paths      = list(string)
+    database_name = optional(string, "")
     schema_change_policy = optional(object({
       update_behavior = optional(string, "UPDATE_IN_DATABASE")
       delete_behavior = optional(string, "LOG")
